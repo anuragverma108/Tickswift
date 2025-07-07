@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { useFirebase } from '../contexts/FirebaseContext';
@@ -13,7 +13,8 @@ const Login = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { login, signInWithGoogle } = useFirebase();
+  const { login, signInWithGoogle, userRole } = useFirebase();
+  const [hasLoggedIn, setHasLoggedIn] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -28,7 +29,7 @@ const Login = () => {
     setError('');
     try {
       await login(formData.email, formData.password);
-      navigate('/dashboard');
+      setHasLoggedIn(true); // Mark that login was successful
     } catch (error) {
       setError(error.message);
     } finally {
@@ -41,13 +42,23 @@ const Login = () => {
     setError('');
     try {
       await signInWithGoogle();
-      navigate('/dashboard');
+      setHasLoggedIn(true);
     } catch (error) {
       setError(error.message);
     } finally {
       setGoogleLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (hasLoggedIn && userRole) {
+      if (userRole === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+    }
+  }, [hasLoggedIn, userRole, navigate]);
 
   return (
     <div className="min-h-screen bg-dark-950 flex items-center justify-center px-4">

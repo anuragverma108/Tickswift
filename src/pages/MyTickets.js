@@ -1,22 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { TicketIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { useFirebase } from '../contexts/FirebaseContext';
+import { useNavigate } from 'react-router-dom';
 
 const MyTickets = () => {
-  const { listenToUserTickets, currentUser } = useFirebase();
+  const { listenToUserTickets, currentUser, userRole, loading } = useFirebase();
+  const navigate = useNavigate();
   const [tickets, setTickets] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+
+  // Guard: redirect admin to /admin
+  React.useEffect(() => {
+    if (!loading && userRole === 'admin') {
+      navigate('/admin', { replace: true });
+    }
+  }, [userRole, loading, navigate]);
 
   useEffect(() => {
     if (!currentUser) return;
-    setLoading(true);
     const unsubscribe = listenToUserTickets((data) => {
       setTickets(data);
-      setLoading(false);
     });
     return unsubscribe;
   }, [currentUser, listenToUserTickets]);
+
+  if (loading || userRole === null) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

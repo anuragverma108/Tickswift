@@ -59,7 +59,7 @@ export const FirebaseProvider = ({ children }) => {
   };
 
   // Authentication functions
-  const signup = async (email, password, name) => {
+  const signup = async (email, password, name, role = 'user') => {
     try {
       // Check network status first
       await checkNetworkStatus();
@@ -73,7 +73,7 @@ export const FirebaseProvider = ({ children }) => {
           name,
           email,
           createdAt: new Date(),
-          role: 'user',
+          role: role || 'user', // Use provided role
           authProvider: 'email'
         });
       } catch (firestoreError) {

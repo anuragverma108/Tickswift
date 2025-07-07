@@ -14,14 +14,7 @@ const priorityOptions = ['All', 'High', 'Medium', 'Low'];
 const categoryOptions = ['All', 'Bug', 'Feature Request', 'Integration'];
 
 const AdminPanel = () => {
-  const {
-    listenToAllTickets,
-    assignTicket,
-    updateTicketStatus,
-    addCommentToTicket,
-    currentUser,
-    getAllUsers
-  } = useFirebase();
+  const { listenToAllTickets, assignTicket, updateTicketStatus, addCommentToTicket, currentUser, getAllUsers, userRole } = useFirebase();
 
   const [tickets, setTickets] = useState([]);
   const [status, setStatus] = useState('All');
@@ -95,6 +88,14 @@ const AdminPanel = () => {
     }
     setActionLoading(false);
   };
+
+  if (userRole !== 'admin') {
+    return (
+      <div className="text-center text-red-400 font-bold mt-10">
+        You do not have permission to view this page.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

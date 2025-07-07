@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   TicketIcon,
   ClockIcon,
@@ -13,8 +13,16 @@ import {
 import { useFirebase } from '../contexts/FirebaseContext';
 
 const Dashboard = () => {
-  const { listenToUserTickets } = useFirebase();
+  const { listenToUserTickets, userRole, loading } = useFirebase();
+  const navigate = useNavigate();
   const [recentTickets, setRecentTickets] = useState([]);
+
+  // Guard: redirect admin to /admin
+  React.useEffect(() => {
+    if (!loading && userRole === 'admin') {
+      navigate('/admin', { replace: true });
+    }
+  }, [userRole, loading, navigate]);
 
   useEffect(() => {
     const unsubscribe = listenToUserTickets((tickets) => {
@@ -22,6 +30,14 @@ const Dashboard = () => {
     });
     return unsubscribe;
   }, [listenToUserTickets]);
+
+  if (loading || userRole === null) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+      </div>
+    );
+  }
 
   const stats = [
     {

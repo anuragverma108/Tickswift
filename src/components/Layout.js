@@ -17,13 +17,13 @@ const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentUser, logout, isOnline } = useFirebase();
+  const { currentUser, logout, isOnline, userRole } = useFirebase();
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
     { name: 'My Tickets', href: '/my-tickets', icon: TicketIcon },
     { name: 'Raise Ticket', href: '/raise-ticket', icon: PlusCircleIcon },
-    { name: 'Admin Panel', href: '/admin', icon: UserGroupIcon },
+    // Admin Panel will be conditionally rendered below
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -71,6 +71,17 @@ const Layout = ({ children }) => {
                 <span className="text-sm font-medium">{item.name}</span>
               </Link>
             ))}
+            {/* Admin Panel link only for admins */}
+            {userRole === 'admin' && (
+              <Link
+                to="/admin"
+                className={`sidebar-item ${isActive('/admin') ? 'active' : ''}`}
+                onClick={() => setSidebarOpen(false)}
+              >
+                <UserGroupIcon className="h-5 w-5 mr-3" />
+                <span className="text-sm font-medium">Admin Panel</span>
+              </Link>
+            )}
           </div>
         </nav>
       </div>

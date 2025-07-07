@@ -6,6 +6,13 @@ TickSwift is a modern, real-time service desk web app built with **React**, **Ta
 
 ## 🚀 Features
 
+- **Role-Based Access Control**: Users select their role (user/admin) at registration. Roles are securely stored in Firestore and used for all routing and UI decisions.
+- **Admin-Only Features**: Admin panel, ticket assignment, and management are only accessible to admins. Admins are redirected away from user-only pages.
+- **User-Only Features**: Users can only access their own dashboard and tickets. Admin links and features are hidden for non-admins.
+- **Protected Routing**: All admin routes are protected by a reusable `AdminRoute` component. User pages also guard against admin access.
+- **Loading Spinners**: Protected routes show a loading spinner while authentication and role are being determined.
+- **Automated Tests**: Role-based routing and UI are covered by automated tests.
+
 ### 1. **Authentication**
 - **Email/Password Sign Up & Login**
 - **Google Sign-In** (OAuth)
@@ -59,6 +66,23 @@ TickSwift is a modern, real-time service desk web app built with **React**, **Ta
 - **Environment Variables**: All sensitive config (Firebase, Razorpay) loaded from `.env` (never pushed to git).
 - **.gitignore**: Ensures secrets and local files are never committed.
 - **Production-Ready**: Linter warnings/errors fixed, code organized, and ready for deployment.
+
+---
+
+## 🛡️ Role-Based Access Control
+
+TickSwift implements robust, secure role-based access control for users and admins:
+
+- **Role Selection at Registration**: Users choose their role (user or admin) when registering. This role is stored in Firestore under their UID.
+- **Role Fetched on Login**: After login, the app fetches the user's role from Firestore and stores it in global context.
+- **Role-Based Routing**: 
+  - Admins are automatically redirected to the admin panel (`/admin`).
+  - Users are redirected to their dashboard (`/dashboard`).
+  - Admins are prevented from accessing user-only pages (dashboard, tickets, etc.) and are always redirected to `/admin`.
+- **AdminRoute Protection**: All admin-only routes are wrapped in a reusable `AdminRoute` component that checks authentication and role.
+- **UI Controls**: Admin links and features are only visible to admins. Users never see admin options.
+- **Loading Spinners**: Protected routes show a loading spinner while authentication and role are being determined, ensuring a smooth experience.
+- **Automated Tests**: The codebase includes automated tests to verify that role-based routing and UI behave as expected for both users and admins.
 
 ---
 

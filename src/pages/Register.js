@@ -8,7 +8,8 @@ const Register = () => {
     name: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    role: 'user' // Add role to form state
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -20,9 +21,10 @@ const Register = () => {
   const { signup, signInWithGoogle } = useFirebase();
 
   const handleChange = (e) => {
+    const { name, value, type } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: type === 'radio' ? value : value
     });
   };
 
@@ -38,7 +40,7 @@ const Register = () => {
     }
     
     try {
-      await signup(formData.email, formData.password, formData.name);
+      await signup(formData.email, formData.password, formData.name, formData.role); // Pass role
       setSuccess(true);
       setTimeout(() => {
         navigate('/login');
@@ -181,6 +183,34 @@ const Register = () => {
                     <EyeIcon className="h-5 w-5" />
                   )}
                 </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Role</label>
+              <div className="flex space-x-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="role"
+                    value="user"
+                    checked={formData.role === 'user'}
+                    onChange={handleChange}
+                    className="form-radio text-primary-600"
+                  />
+                  <span className="ml-2 text-gray-300">User</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="role"
+                    value="admin"
+                    checked={formData.role === 'admin'}
+                    onChange={handleChange}
+                    className="form-radio text-primary-600"
+                  />
+                  <span className="ml-2 text-gray-300">Admin</span>
+                </label>
               </div>
             </div>
 
