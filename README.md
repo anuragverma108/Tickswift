@@ -153,6 +153,12 @@ TickSwift implements robust, secure role-based access control for users and admi
 - Built with [React](https://reactjs.org/), [Tailwind CSS](https://tailwindcss.com/), [Firebase](https://firebase.google.com/), and [Razorpay](https://razorpay.com/).
 - UI inspired by modern SaaS dashboards.
 
+--- 
+
+## 👨‍💻 Developer Contact
+**Developer:** Anurag Verma  
+**Email:** anuragvermacontact@gmail.com
+
 ---
 
 ## 📄 License
@@ -165,6 +171,3 @@ MIT
 
 ---
 
-## 👨‍💻 Developer Contact
-**Developer:** Anurag Verma  
-**Email:** anuragvermacontact@gmail.com
