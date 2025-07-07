@@ -138,3 +138,9 @@ MIT
 ---
 
 **Enjoy using TickSwift! If you have questions or want to contribute, open an issue or pull request.**
+
+---
+
+## 👨‍💻 Developer Contact
+**Developer:** Anurag Verma  
+**Email:** anuragvermacontact@gmail.com
