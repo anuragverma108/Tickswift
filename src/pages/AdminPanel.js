@@ -14,7 +14,7 @@ const priorityOptions = ['All', 'High', 'Medium', 'Low'];
 const categoryOptions = ['All', 'Bug', 'Feature Request', 'Integration'];
 
 const AdminPanel = () => {
-  const { listenToAllTickets, assignTicket, updateTicketStatus, addCommentToTicket, currentUser, getAllUsers, userRole } = useFirebase();
+  const { listenToAllTickets, assignTicket, updateTicketStatus, addCommentToTicket, currentUser, getAllUsers, userRole, getAllTickets } = useFirebase();
 
   const [tickets, setTickets] = useState([]);
   const [status, setStatus] = useState('All');
@@ -26,11 +26,41 @@ const AdminPanel = () => {
   const [assignUserId, setAssignUserId] = useState('');
   const [commentInput, setCommentInput] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Manual refresh function for when real-time listeners are disabled
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const allTickets = await getAllTickets();
+      setTickets(allTickets);
+    } catch (error) {
+      console.error('Error refreshing tickets:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Real-time tickets
   useEffect(() => {
-    const unsubscribe = listenToAllTickets(setTickets);
-    return unsubscribe;
+    let unsubscribe = () => {};
+    
+    try {
+      unsubscribe = listenToAllTickets((tickets) => {
+        setTickets(tickets);
+      });
+    } catch (error) {
+      console.error('Error setting up admin tickets listener:', error);
+      setTickets([]);
+    }
+    
+    return () => {
+      try {
+        unsubscribe();
+      } catch (error) {
+        console.error('Error cleaning up admin tickets listener:', error);
+      }
+    };
   }, [listenToAllTickets]);
 
   // Fetch users when modal opens
@@ -105,6 +135,18 @@ const AdminPanel = () => {
           <p className="text-gray-400 mt-1">Manage all tickets, assign, and update statuses.</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="btn-secondary flex items-center gap-2"
+          >
+            {isRefreshing ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            ) : (
+              <ArrowPathIcon className="h-4 w-4" />
+            )}
+            Refresh
+          </button>
           <div className="relative">
             <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input

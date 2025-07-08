@@ -25,10 +25,24 @@ const Dashboard = () => {
   }, [userRole, loading, navigate]);
 
   useEffect(() => {
-    const unsubscribe = listenToUserTickets((tickets) => {
-      setRecentTickets(tickets.slice(0, 3));
-    });
-    return unsubscribe;
+    let unsubscribe = () => {};
+    
+    try {
+      unsubscribe = listenToUserTickets((tickets) => {
+        setRecentTickets(tickets.slice(0, 3));
+      });
+    } catch (error) {
+      console.error('Error setting up user tickets listener:', error);
+      setRecentTickets([]);
+    }
+    
+    return () => {
+      try {
+        unsubscribe();
+      } catch (error) {
+        console.error('Error cleaning up user tickets listener:', error);
+      }
+    };
   }, [listenToUserTickets]);
 
   if (loading || userRole === null) {

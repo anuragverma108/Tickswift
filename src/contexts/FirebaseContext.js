@@ -43,6 +43,8 @@ export const FirebaseProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
   const [userRole, setUserRole] = useState(null);
+  const [useRealTimeListeners, setUseRealTimeListeners] = useState(true); // Flag to disable listeners if they fail
+  const [listenerFailures, setListenerFailures] = useState(0); // Track consecutive failures
 
   // Google Auth Provider
   const googleProvider = new GoogleAuthProvider();
@@ -76,9 +78,12 @@ export const FirebaseProvider = ({ children }) => {
           role: role || 'user', // Use provided role
           authProvider: 'email'
         });
+        // Set the role in context immediately after creating the document
+        setUserRole(role || 'user');
       } catch (firestoreError) {
         console.error('Firestore error during signup:', firestoreError);
         // Continue even if Firestore fails - user is still created in Auth
+        setUserRole(role || 'user'); // Set role even if Firestore fails
       }
       
       return userCredential.user;
@@ -94,6 +99,24 @@ export const FirebaseProvider = ({ children }) => {
       await checkNetworkStatus();
       
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Fetch user role from Firestore after successful login
+      try {
+        const userDocRef = doc(db, 'users', userCredential.user.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setUserRole(userData.role || 'user');
+        } else {
+          // Fallback if user document doesn't exist
+          setUserRole('user');
+        }
+      } catch (firestoreError) {
+        console.error('Firestore error during login:', firestoreError);
+        setUserRole('user'); // Default fallback
+      }
+      
       return userCredential.user;
     } catch (error) {
       console.error('Login error:', error);
@@ -109,6 +132,7 @@ export const FirebaseProvider = ({ children }) => {
       
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
+      console.log('Google sign-in successful for user:', user.email);
       
       // Check if user document exists, if not create one
       try {
@@ -116,19 +140,32 @@ export const FirebaseProvider = ({ children }) => {
         const userDoc = await getDoc(userDocRef);
         
         if (!userDoc.exists()) {
-          // Create user document for new Google users
+          console.log('Creating new user document for Google user');
+          // Create user document for new Google users with default role 'user'
           await setDoc(userDocRef, {
             name: user.displayName,
             email: user.email,
             photoURL: user.photoURL,
             createdAt: new Date(),
-            role: 'user',
+            role: 'user', // Default role for Google users
             authProvider: 'google'
           });
+          // Set the role in context for new users
+          setUserRole('user');
+          console.log('New Google user role set to: user');
+        } else {
+          console.log('Existing Google user found, fetching role');
+          // For existing users, fetch their role from Firestore
+          const userData = userDoc.data();
+          const role = userData.role || 'user';
+          setUserRole(role);
+          console.log('Existing Google user role set to:', role);
         }
       } catch (firestoreError) {
         console.error('Firestore error during Google sign-in:', firestoreError);
         // Continue even if Firestore fails - user is still authenticated
+        setUserRole('user'); // Default fallback
+        console.log('Google sign-in fallback role set to: user');
       }
       
       return user;
@@ -159,18 +196,25 @@ export const FirebaseProvider = ({ children }) => {
           const userDoc = await getDoc(userDocRef);
           
           if (!userDoc.exists()) {
-            // Create user document for new Google users
+            // Create user document for new Google users with default role 'user'
             await setDoc(userDocRef, {
               name: user.displayName,
               email: user.email,
               photoURL: user.photoURL,
               createdAt: new Date(),
-              role: 'user',
+              role: 'user', // Default role for Google users
               authProvider: 'google'
             });
+            // Set the role in context for new users
+            setUserRole('user');
+          } else {
+            // For existing users, fetch their role from Firestore
+            const userData = userDoc.data();
+            setUserRole(userData.role || 'user');
           }
         } catch (firestoreError) {
           console.error('Firestore error during redirect result:', firestoreError);
+          setUserRole('user'); // Default fallback
         }
         
         return user;
@@ -287,35 +331,111 @@ export const FirebaseProvider = ({ children }) => {
     }
   };
 
+  // Function to re-enable real-time listeners
+  const reEnableRealTimeListeners = () => {
+    setUseRealTimeListeners(true);
+    setListenerFailures(0);
+  };
+
+  // Function to manually refresh tickets (for when listeners are disabled)
+  const refreshTickets = async (callback, isAdmin = false) => {
+    try {
+      const tickets = isAdmin ? await getAllTickets() : await getUserTickets();
+      callback(tickets);
+    } catch (error) {
+      console.error('Error refreshing tickets:', error);
+      callback([]);
+    }
+  };
+
   // Real-time listener for user's tickets
   const listenToUserTickets = (callback) => {
     if (!currentUser || !currentUser.uid) return () => {};
-    const q = query(
-      collection(db, 'tickets'),
-      where('userId', '==', currentUser.uid),
-      orderBy('createdAt', 'desc')
-    );
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const tickets = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      callback(tickets);
-    });
-    return unsubscribe;
+    
+    // If real-time listeners are disabled, use regular query
+    if (!useRealTimeListeners) {
+      refreshTickets(callback, false);
+      return () => {};
+    }
+    
+    try {
+      const q = query(
+        collection(db, 'tickets'),
+        where('userId', '==', currentUser.uid),
+        orderBy('createdAt', 'desc')
+      );
+      const unsubscribe = onSnapshot(q, 
+        (querySnapshot) => {
+          const tickets = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          callback(tickets);
+          setListenerFailures(0); // Reset failure count on success
+        },
+        (error) => {
+          console.error('Firestore listener error, falling back to regular queries:', error);
+          setListenerFailures(prev => prev + 1);
+          if (listenerFailures >= 2) { // Disable after 2 consecutive failures
+            setUseRealTimeListeners(false);
+          }
+          // Fall back to regular query
+          refreshTickets(callback, false);
+        }
+      );
+      return unsubscribe;
+    } catch (error) {
+      console.error('Error setting up user tickets listener:', error);
+      setListenerFailures(prev => prev + 1);
+      if (listenerFailures >= 2) { // Disable after 2 consecutive failures
+        setUseRealTimeListeners(false);
+      }
+      // Fall back to regular query
+      refreshTickets(callback, false);
+      return () => {};
+    }
   };
 
   // Real-time listener for all tickets (admin)
   const listenToAllTickets = (callback) => {
-    const q = query(collection(db, 'tickets'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const tickets = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      callback(tickets);
-    });
-    return unsubscribe;
+    // If real-time listeners are disabled, use regular query
+    if (!useRealTimeListeners) {
+      refreshTickets(callback, true);
+      return () => {};
+    }
+    
+    try {
+      const q = query(collection(db, 'tickets'), orderBy('createdAt', 'desc'));
+      const unsubscribe = onSnapshot(q, 
+        (querySnapshot) => {
+          const tickets = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          callback(tickets);
+          setListenerFailures(0); // Reset failure count on success
+        },
+        (error) => {
+          console.error('Firestore listener error, falling back to regular queries:', error);
+          setListenerFailures(prev => prev + 1);
+          if (listenerFailures >= 2) { // Disable after 2 consecutive failures
+            setUseRealTimeListeners(false);
+          }
+          // Fall back to regular query
+          refreshTickets(callback, true);
+        }
+      );
+      return unsubscribe;
+    } catch (error) {
+      console.error('Error setting up tickets listener:', error);
+      setListenerFailures(prev => prev + 1);
+      if (listenerFailures >= 2) { // Disable after 2 consecutive failures
+        setUseRealTimeListeners(false);
+      }
+      // Fall back to regular query
+      refreshTickets(callback, true);
+      return () => {};
+    }
   };
 
   // Assign ticket to an agent
@@ -400,7 +520,10 @@ export const FirebaseProvider = ({ children }) => {
     assignTicket,
     addCommentToTicket,
     userRole,
-    getAllUsers
+    getAllUsers,
+    useRealTimeListeners,
+    reEnableRealTimeListeners,
+    refreshTickets
   };
 
   return (

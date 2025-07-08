@@ -52,11 +52,15 @@ const Login = () => {
 
   useEffect(() => {
     if (hasLoggedIn && userRole) {
-      if (userRole === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
-      }
+      console.log('Login redirect - hasLoggedIn:', hasLoggedIn, 'userRole:', userRole);
+      // Small delay to ensure role is properly set
+      setTimeout(() => {
+        if (userRole === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
+      }, 100);
     }
   }, [hasLoggedIn, userRole, navigate]);
 

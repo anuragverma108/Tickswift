@@ -18,10 +18,25 @@ const MyTickets = () => {
 
   useEffect(() => {
     if (!currentUser) return;
-    const unsubscribe = listenToUserTickets((data) => {
-      setTickets(data);
-    });
-    return unsubscribe;
+    
+    let unsubscribe = () => {};
+    
+    try {
+      unsubscribe = listenToUserTickets((data) => {
+        setTickets(data);
+      });
+    } catch (error) {
+      console.error('Error setting up my tickets listener:', error);
+      setTickets([]);
+    }
+    
+    return () => {
+      try {
+        unsubscribe();
+      } catch (error) {
+        console.error('Error cleaning up my tickets listener:', error);
+      }
+    };
   }, [currentUser, listenToUserTickets]);
 
   if (loading || userRole === null) {

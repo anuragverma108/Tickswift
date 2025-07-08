@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { useFirebase } from '../contexts/FirebaseContext';
@@ -15,10 +15,11 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { signup, signInWithGoogle } = useFirebase();
+  const { signup, signInWithGoogle, userRole } = useFirebase();
+  const [hasSignedUp, setHasSignedUp] = useState(false);
+  const [hasGoogleSignedUp, setHasGoogleSignedUp] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
@@ -41,10 +42,7 @@ const Register = () => {
     
     try {
       await signup(formData.email, formData.password, formData.name, formData.role); // Pass role
-      setSuccess(true);
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000);
+      setHasSignedUp(true); // Mark that signup was successful
     } catch (error) {
       setError(error.message);
     } finally {
@@ -58,13 +56,35 @@ const Register = () => {
     
     try {
       await signInWithGoogle();
-      navigate('/dashboard');
+      setHasGoogleSignedUp(true); // Mark that Google signup was successful
     } catch (error) {
       setError(error.message);
     } finally {
       setGoogleLoading(false);
     }
   };
+
+  // Redirect based on role after email signup
+  useEffect(() => {
+    if (hasSignedUp && userRole) {
+      if (userRole === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+    }
+  }, [hasSignedUp, userRole, navigate]);
+
+  // Redirect based on role after Google signup
+  useEffect(() => {
+    if (hasGoogleSignedUp && userRole) {
+      if (userRole === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+    }
+  }, [hasGoogleSignedUp, userRole, navigate]);
 
   return (
     <div className="min-h-screen bg-dark-950 flex items-center justify-center px-4">
@@ -79,13 +99,6 @@ const Register = () => {
         </div>
 
         {/* Success Message */}
-        {success && (
-          <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-4 text-center">
-            <p className="text-green-400 font-medium">Account created successfully!</p>
-            <p className="text-green-300 text-sm mt-1">Redirecting to login...</p>
-          </div>
-        )}
-
         {/* Error Message */}
         {error && (
           <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 text-center">
