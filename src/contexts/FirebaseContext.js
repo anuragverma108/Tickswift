@@ -23,7 +23,8 @@ import {
   orderBy,
   enableNetwork,
   onSnapshot,
-  arrayUnion
+  arrayUnion,
+  serverTimestamp
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db, storage } from '../firebase';
@@ -61,7 +62,7 @@ export const FirebaseProvider = ({ children }) => {
   };
 
   // Authentication functions
-  const signup = async (email, password, name, role = 'user') => {
+  const signup = async (email, password, name) => {
     try {
       // Check network status first
       await checkNetworkStatus();
@@ -75,15 +76,12 @@ export const FirebaseProvider = ({ children }) => {
           name,
           email,
           createdAt: new Date(),
-          role: role || 'user', // Use provided role
           authProvider: 'email'
         });
-        // Set the role in context immediately after creating the document
-        setUserRole(role || 'user');
+        // Do not set userRole here
       } catch (firestoreError) {
         console.error('Firestore error during signup:', firestoreError);
         // Continue even if Firestore fails - user is still created in Auth
-        setUserRole(role || 'user'); // Set role even if Firestore fails
       }
       
       return userCredential.user;
@@ -243,8 +241,8 @@ export const FirebaseProvider = ({ children }) => {
         userId: currentUser.uid,
         userName: currentUser.displayName,
         status: 'Open',
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       });
       return ticketRef.id;
     } catch (error) {
@@ -260,6 +258,7 @@ export const FirebaseProvider = ({ children }) => {
       const q = query(
         collection(db, 'tickets'),
         where('userId', '==', currentUser.uid),
+        where('createdAt', '!=', null),
         orderBy('createdAt', 'desc')
       );
       const querySnapshot = await getDocs(q);
@@ -279,6 +278,7 @@ export const FirebaseProvider = ({ children }) => {
       
       const q = query(
         collection(db, 'tickets'),
+        where('createdAt', '!=', null),
         orderBy('createdAt', 'desc')
       );
       const querySnapshot = await getDocs(q);
@@ -362,6 +362,7 @@ export const FirebaseProvider = ({ children }) => {
       const q = query(
         collection(db, 'tickets'),
         where('userId', '==', currentUser.uid),
+        where('createdAt', '!=', null),
         orderBy('createdAt', 'desc')
       );
       const unsubscribe = onSnapshot(q, 
@@ -405,7 +406,7 @@ export const FirebaseProvider = ({ children }) => {
     }
     
     try {
-      const q = query(collection(db, 'tickets'), orderBy('createdAt', 'desc'));
+      const q = query(collection(db, 'tickets'), where('createdAt', '!=', null), orderBy('createdAt', 'desc'));
       const unsubscribe = onSnapshot(q, 
         (querySnapshot) => {
           const tickets = querySnapshot.docs.map(doc => ({
@@ -474,9 +475,14 @@ export const FirebaseProvider = ({ children }) => {
   useEffect(() => {
     if (!currentUser) return;
     const fetchRole = async () => {
-      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
         setUserRole(userDoc.data().role);
+      } else {
+        // If user doc does not exist, set default role and create the doc
+        setUserRole('user');
+        await setDoc(userDocRef, { role: 'user' }, { merge: true });
       }
     };
     fetchRole();
@@ -500,35 +506,33 @@ export const FirebaseProvider = ({ children }) => {
     };
   }, []);
 
-  const value = {
-    currentUser,
-    signup,
-    login,
-    logout,
-    signInWithGoogle,
-    signInWithGoogleRedirect,
-    createTicket,
-    getUserTickets,
-    getAllTickets,
-    updateTicketStatus,
-    uploadFile,
-    getUserProfile,
-    loading,
-    isOnline,
-    listenToUserTickets,
-    listenToAllTickets,
-    assignTicket,
-    addCommentToTicket,
-    userRole,
-    getAllUsers,
-    useRealTimeListeners,
-    reEnableRealTimeListeners,
-    refreshTickets
-  };
-
   return (
-    <FirebaseContext.Provider value={value}>
-      {!loading && children}
+    <FirebaseContext.Provider value={{
+      currentUser,
+      loading,
+      isOnline,
+      userRole,
+      setUserRole,
+      signup,
+      login,
+      logout,
+      signInWithGoogle,
+      signInWithGoogleRedirect,
+      handleGoogleRedirectResult,
+      createTicket,
+      getUserTickets,
+      getAllTickets,
+      updateTicketStatus,
+      uploadFile,
+      getUserProfile,
+      reEnableRealTimeListeners,
+      refreshTickets,
+      listenToUserTickets,
+      listenToAllTickets,
+      assignTicket,
+      db // Ensure db is provided in context
+    }}>
+      {children}
     </FirebaseContext.Provider>
   );
 }; 

@@ -95,7 +95,6 @@ const RaiseTicket = () => {
         description: formData.description,
         category: formData.category,
         priority: formData.priority,
-        createdAt: new Date(),
         userId: currentUser.uid,
         status: 'Open',
         title: formData.title,

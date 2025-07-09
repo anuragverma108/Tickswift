@@ -8,6 +8,7 @@ import RaiseTicket from './pages/RaiseTicket';
 import MyTickets from './pages/MyTickets';
 import AdminPanel from './pages/AdminPanel';
 import Layout from './components/Layout';
+import RoleSelection from './pages/RoleSelection';
 
 // AdminRoute component
 function AdminRoute({ children }) {
@@ -31,6 +32,7 @@ function App() {
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/role-selection" element={<RoleSelection />} />
             
             {/* Protected Routes */}
             <Route path="/dashboard" element={

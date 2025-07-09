@@ -51,18 +51,10 @@ const Login = () => {
   };
 
   useEffect(() => {
-    if (hasLoggedIn && userRole) {
-      console.log('Login redirect - hasLoggedIn:', hasLoggedIn, 'userRole:', userRole);
-      // Small delay to ensure role is properly set
-      setTimeout(() => {
-        if (userRole === 'admin') {
-          navigate('/admin');
-        } else {
-          navigate('/dashboard');
-        }
-      }, 100);
+    if (hasLoggedIn) {
+      navigate('/role-selection');
     }
-  }, [hasLoggedIn, userRole, navigate]);
+  }, [hasLoggedIn, navigate]);
 
   return (
     <div className="min-h-screen bg-dark-950 flex items-center justify-center px-4">
