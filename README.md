@@ -3,11 +3,6 @@
 TickSwift is a modern, real-time service desk web app built with **React**, **Tailwind CSS**, and **Firebase**. It supports user and admin workflows, premium ticketing with Razorpay payments, and a beautiful dark UI.
 
 ---
-## Complete Demo Video
-https://github.com/user-attachments/assets/454b8561-af15-4d3b-bd24-dccaf78dc593
-
-
-
 
 ## 🚀 Features
 
